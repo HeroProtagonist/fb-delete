@@ -25,14 +25,30 @@ async function main() {
   await next(answers.categories, answers.years);
 }
 
-async function next(categories, years) {
+async function goToFilters() {
   await followLinkByContent('Profile');
   await followLinkByContent('Activity Log');
   await followLinkByContent('Filter');
+}
+
+async function visitCategory (category) {
+  try {
+    await followLinkByContent(category);
+  } catch (e) {
+    console.log('Error trying again from filters page', e);
+    await page.goto('https://mbasic.facebook.com/');
+    await goToFilters();
+    await followLinkByContent(category);
+  }
+}
+
+async function next(categories, years) {
+  await goToFilters()
 
   for (const i in categories) {
-    console.log("Deleting category " + categories[i]);
-    await followLinkByContent(categories[i]);
+    const category = categories[i]
+    console.log("Deleting category " + category);
+    await visitCategory(category)
     for (const j in years) {
       console.log("In year " + years[j]);
       try {
@@ -42,7 +58,7 @@ async function next(categories, years) {
         console.log(`Year ${years[j]} not found.`, e);
       }
     }
-    await followLinkByContent(categories[i]);
+    await visitCategory(category)
   }
 
   await page.close();
@@ -51,7 +67,7 @@ async function next(categories, years) {
 }
 
 async function deletePosts() {
-  // get all "allactivity/delete" and "allactivity/removecontent" links on page
+  // get all "allactivity/delete", "allactivity/removecontent", and allactivity/visibility links on page
   const deleteLinks = await page.evaluate(() => {
     const links = [];
     const deleteElements = document.querySelectorAll('a[href*="allactivity/delete"]');
